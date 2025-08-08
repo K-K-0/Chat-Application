@@ -4,6 +4,7 @@ import (
 	"Chat/controllers"
 	"Chat/database"
 	"Chat/middlewares"
+	"Chat/websockets/chat"
 	"net/http"
 
 	"Chat/models"
@@ -31,9 +32,17 @@ func main() {
 		log.Fatalf("AutoMigrate failed %v", err)
 	}
 
+	hub := chat.NewHub()
+	go hub.Run()
+
 	router := gin.Default()
 
 	router.POST("/signup", controllers.Registration)
+	router.GET("/ws/:roomID/:userID", func(c *gin.Context) {
+		roomID := c.Param("roomID")
+		userID := c.Param("userID")
+		chat.ServeWS(hub, c.Writer, c.Request, userID, roomID)
+	})
 
 	router.Use(middlewares.AuthMiddleware())
 	router.GET("/Me", func(c *gin.Context) {
